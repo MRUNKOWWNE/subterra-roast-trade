@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Subterra Roast & Trade</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: #12100e;
+      --card: #1e1a16;
+      --border: #332b24;
+      --text: #f5efe6;
+      --muted: #a69888;
+      --gold: #f5b942;
+      --cash: #4ade80;
+      --bean: #c08457;
+      --accent: #e07a3f;
+      --danger: #f87171;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 12px 12px 84px; user-select: none; }
+    
+    /* Top Header & Currencies */
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .title { font-size: 16px; font-weight: 800; letter-spacing: 0.3px; }
+    .rank-badge { background: var(--card); border: 1px solid var(--gold); color: var(--gold); padding: 3px 8px; border-radius: 99px; font-size: 11px; font-weight: 700; }
+    
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
+    .stat-box { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 8px 6px; text-align: center; }
+    .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; }
+    .stat-val { font-size: 14px; font-weight: 800; margin-top: 2px; }
+    .c-cash { color: var(--cash); }
+    .c-gold { color: var(--gold); }
+    .c-bean { color: var(--bean); }
+
+    /* Cards & Buttons */
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .card-title { font-size: 15px; font-weight: 700; }
+    .pill { font-size: 11px; background: #2a241e; padding: 3px 8px; border-radius: 8px; color: var(--muted); }
+    .desc { font-size: 12px; color: var(--muted); line-height: 1.4; margin-bottom: 10px; }
+    
+    .progress-wrap { background: #0d0b0a; height: 8px; border-radius: 99px; overflow: hidden; margin: 8px 0 12px; }
+    .progress-bar { height: 100%; background: linear-gradient(90deg, var(--bean), var(--gold)); width: 0%; transition: width 0.2s; }
+
+    .btn { width: 100%; border: none; border-radius: 10px; padding: 11px 12px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: transform 0.08s, opacity 0.2s; }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #fff; justify-content: center; }
+    .btn-gold { background: var(--gold); color: #1a1305; }
+    .btn-cash { background: #22543d; color: var(--cash); border: 1px solid #2f855a; }
+    .btn-dark { background: #29231e; color: var(--text); border: 1px solid var(--border); margin-top: 8px; }
+
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+
+    /* Deal Cards */
+    .deal-item { background: #171411; border: 1px dashed var(--border); border-radius: 10px; padding: 10px; margin-bottom: 8px; }
+    .deal-tag { display: inline-block; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: #3b1d14; color: #ff9e7d; margin-bottom: 4px; }
+
+    /* Bottom Navigation */
+    .nav { position: fixed; bottom: 0; left: 0; right: 0; background: #181411; border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(3, 1fr); padding: 8px 10px; gap: 8px; }
+    .nav-btn { background: transparent; border: none; color: var(--muted); font-size: 12px; font-weight: 700; padding: 8px 4px; border-radius: 10px; cursor: pointer; }
+    .nav-btn.active { background: #2b241d; color: var(--gold); }
+
+    /* Toast */
+    .toast { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); background: #2d2620; border: 1px solid var(--gold); color: var(--text); padding: 8px 14px; border-radius: 99px; font-size: 12px; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity 0.25s; z-index: 99; white-space: nowrap; }
+    .toast.show { opacity: 1; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+  <div id="toast" class="toast">Saved!</div>
+
+  <div class="header">
+    <div>
+      <div class="title">Subterra Roast & Trade</div>
+      <div id="playerName" style="font-size:11px; color:var(--muted);">Founder</div>
+    </div>
+    <div id="rankBadge" class="rank-badge">Rank 1: Street Cart</div>
+  </div>
+
+  <!-- Top Resource Bar -->
+  <div class="stats-grid">
+    <div class="stat-box">
+      <div class="stat-label">Cash</div>
+      <div id="uiCash" class="stat-val c-cash">$100</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Gold</div>
+      <div id="uiGold" class="stat-val c-gold">10 Au</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Beans</div>
+      <div id="uiBeans" class="stat-val c-bean">20/120</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Rep</div>
+      <div id="uiRep" class="stat-val">0</div>
+    </div>
+  </div>
+
+  <!-- TAB 1: THE MINE -->
+  <div id="tab-mine">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title" id="shaftTitle">Shaft 1: Shallow Tunnel</div>
+        <div class="pill" id="mineRates">+4.0 Beans/m | +0.5 Au/m</div>
+      </div>
+      <div class="desc">Miners extract Cave Beans & Gold automatically—even while offline (up to 4h). Tap Dig for instant bonus!</div>
+      
+      <div style="display:flex; justify-content:space-between; font-size:12px;">
+        <span>Cart Storage</span>
+        <span id="cartText">20 / 120 Beans</span>
+      </div>
+      <div class="progress-wrap"><div id="cartBar" class="progress-bar"></div></div>
+
+      <button class="btn btn-primary" onclick="manualDig()">⛏️ Dig Now (+2 Beans, +0.2 Gold)</button>
+
+      <div class="row-2">
+        <button class="btn btn-cash" id="btnMiner" onclick="buyUpgrade('miner')">
+          <span>Hire Miner (Lv.<span id="lvMiner">1</span>)</span>
+          <span id="costMiner">$50</span>
+        </button>
+        <button class="btn btn-cash" id="btnCart" onclick="buyUpgrade('cart')">
+          <span>Bigger Cart (Lv.<span id="lvCart">1</span>)</span>
+          <span id="costCart">$100</span>
+        </button>
+      </div>
+
+      <button class="btn btn-dark" id="btnShaft" onclick="unlockNextShaft()">
+        <span id="nextShaftLabel">Unlock Shaft 2: Quartz Cavern</span>
+        <span class="c-gold" id="costShaft">75 Au</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- TAB 2: THE CAFE -->
+  <div id="tab-cafe" class="hidden">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title" id="drinkTitle">Menu: Drip Coffee</div>
+        <div class="pill" id="cupValue">$8.00 / cup</div>
+      </div>
+      <div class="desc">Roast 2 Cave Beans into 1 Cup of Coffee to earn Cash & Reputation. Baristas brew automatically when beans are stocked.</div>
+
+      <button class="btn btn-primary" id="btnBrew" onclick="manualBrew()">
+        ☕ Brew & Serve Batch (10 Beans -> <span id="brewPayout">$40</span>)
+      </button>
+
+      <div class="row-2">
+        <button class="btn btn-cash" id="btnMachine" onclick="buyUpgrade('machine')">
+          <span>Espresso Gear (Lv.<span id="lvMachine">1</span>)</span>
+          <span id="costMachine">$60</span>
+        </button>
+        <button class="btn btn-cash" id="btnBarista" onclick="buyUpgrade('barista')">
+          <span>Auto-Barista (Lv.<span id="lvBarista">0</span>)</span>
+          <span id="costBarista">$120</span>
+        </button>
+      </div>
+
+      <button class="btn btn-dark" id="btnRecipe" onclick="unlockNextRecipe()">
+        <span id="nextRecipeLabel">Unlock Recipe: Espresso</span>
+        <span class="c-gold" id="costRecipe">50 Au</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- TAB 3: DEAL DESK ("Kupil za Ruble") -->
+  <div id="tab-deals" class="hidden">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Deal Desk — Flash Flips</div>
+        <div class="pill" id="dealTimer">Refreshes in 30:00</div>
+      </div>
+      <div class="desc">Limited-time deals rotate every 30 minutes. Snag cheap supplies or flip coffee contracts for massive margins!</div>
+      <div id="dealsContainer"></div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <div class="nav">
+    <button class="nav-btn active" id="nav-mine" onclick="switchTab('mine')">⛏️ The Mine</button>
+    <button class="nav-btn" id="nav-cafe" onclick="switchTab('cafe')">☕ The Cafe</button>
+    <button class="nav-btn" id="nav-deals" onclick="switchTab('deals')">🏷️ Deal Desk</button>
+  </div>
+
+<script>
+  const tg = window.Telegram?.WebApp;
+  if (tg) {
+    tg.ready();
+    tg.expand();
+    const user = tg.initDataUnsafe?.user;
+    if (user) document.getElementById('playerName').innerText = `Boss ${user.first_name}`;
+  }
+
+  const SHAFTS = [
+    { name: "Shallow Tunnel", mult: 1.0, cost: 0 },
+    { name: "Quartz Cavern", mult: 2.2, cost: 75 },
+    { name: "Magma Vein", mult: 4.5, cost: 250 },
+    { name: "Abyssal Core", mult: 9.0, cost: 800 }
+  ];
+
+  const RECIPES = [
+    { name: "Drip Coffee", basePrice: 8, cost: 0 },
+    { name: "Espresso Shot", basePrice: 16, cost: 50 },
+    { name: "Subterra Latte", basePrice: 32, cost: 180 },
+    { name: "Golden Reserve", basePrice: 70, cost: 500 }
+  ];
+
+  let state = {
+    cash: 100,
+    gold: 10,
+    beans: 20,
+    rep: 0,
+    minerLv: 1,
+    cartLv: 1,
+    machineLv: 1,
+    baristaLv: 0,
+    shaftIdx: 0,
+    recipeIdx: 0,
+    claimedDeals: {},
+    lastSeen: Date.now()
+  };
+
+  function haptic(type = 'light') {
+    if (tg?.HapticFeedback) tg.HapticFeedback.impactOccurred(type);
+  }
+
+  function showToast(msg) {
+    const el = document.getElementById('toast');
+    el.innerText = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2000);
+  }
+
+  // Economy Formulas
+  const getMaxCart = () => 120 + (state.cartLv - 1) * 80;
+  const getBeansPerMin = () => 4 * state.minerLv * SHAFTS[state.shaftIdx].mult;
+  const getGoldPerMin = () => 0.5 * state.minerLv * SHAFTS[state.shaftIdx].mult;
+  const getCupPrice = () => RECIPES[state.recipeIdx].basePrice * (1 + 0.12 * (state.machineLv - 1)) * (1 + Math.min(1, state.rep / 5000));
+  const getCost = (base, lv) => Math.floor(base * Math.pow(1.18, lv));
+
+  function getDealWindow() {
+    return Math.floor(Date.now() / (30 * 60 * 1000));
+  }
+
+  function getCurrentDeals() {
+    const win = getDealWindow();
+    const scale = Math.max(1, Math.floor((state.shaftIdx + 1) * (state.minerLv * 0.6)));
+    return [
+      {
+        id: `${win}_1`,
+        tag: "65% OFF — PENNY CRATE",
+        title: `Buy ${40 * scale} Cave Beans`,
+        desc: `Market value $${80 * scale}. Snag for pennies!`,
+        btn: `Snag for $${28 * scale}`,
+        canBuy: () => state.cash >= 28 * scale && state.beans < getMaxCart(),
+        buy: () => {
+          state.cash -= 28 * scale;
+          state.beans = Math.min(getMaxCart(), state.beans + 40 * scale);
+          showToast(`Snagged +${40 * scale} Cave Beans!`);
+        }
+      },
+      {
+        id: `${win}_2`,
+        tag: "1.8x RUSH CONTRACT",
+        title: `Deliver ${15 * scale} Coffee Cups`,
+        desc: `Requires ${30 * scale} Beans. Pays $${Math.floor(15 * scale * getCupPrice() * 1.8)} + ${25 * scale} Rep!`,
+        btn: `Fulfill (${30 * scale} Beans)`,
+        canBuy: () => state.beans >= 30 * scale,
+        buy: () => {
+          const payout = Math.floor(15 * scale * getCupPrice() * 1.8);
+          state.beans -= 30 * scale;
+          state.cash += payout;
+          state.rep += 25 * scale;
+          showToast(`Contract complete! +$${payout} & +${25 * scale} Rep`);
+        }
+      },
+      {
+        id: `${win}_3`,
+        tag: "SMUGGLER'S ARBITRAGE",
+        title: `Swap 20 Gold for Instant Cash`,
+        desc: `Convert Gold reserves into $${Math.floor(220 * scale * (1 + state.recipeIdx * 0.5))} working capital.`,
+        btn: `Swap 20 Au`,
+        canBuy: () => state.gold >= 20,
+        buy: () => {
+          const cashGain = Math.floor(220 * scale * (1 + state.recipeIdx * 0.5));
+          state.gold -= 20;
+          state.cash += cashGain;
+          showToast(`Swapped 20 Au for +$${cashGain}!`);
+        }
+      }
+    ];
+  }
+
+  // Player Actions
+  function manualDig() {
+    haptic('medium');
+    state.beans = Math.min(getMaxCart(), state.beans + 2);
+    state.gold += 0.2;
+    render();
+  }
+
+  function manualBrew() {
+    if (state.beans < 10) return showToast("Need at least 10 Cave Beans!");
+    haptic('medium');
+    const earned = Math.floor(5 * getCupPrice());
+    state.beans -= 10;
+    state.cash += earned;
+    state.rep += 5;
+    showToast(`Served 5 Cups! +$${earned} & +5 Rep`);
+    render();
+  }
+
+  function buyUpgrade(type) {
+    const map = {
+      miner: { key: 'minerLv', base: 50 },
+      cart: { key: 'cartLv', base: 100 },
+      machine: { key: 'machineLv', base: 60 },
+      barista: { key: 'baristaLv', base: 120 }
+    };
+    const item = map[type];
+    const cost = getCost(item.base, state[item.key]);
+    if (state.cash < cost) return showToast("Not enough Cash!");
+    haptic('heavy');
+    state.cash -= cost;
+    state[item.key] += 1;
+    showToast("Upgrade purchased!");
+    render();
+    saveGame();
+  }
+
+  function unlockNextShaft() {
+    const next = SHAFTS[state.shaftIdx + 1];
+    if (!next || state.gold < next.cost) return showToast("Not enough Gold!");
+    haptic('heavy');
+    state.gold -= next.cost;
+    state.shaftIdx += 1;
+    showToast(`Unlocked ${next.name}!`);
+    render();
+    saveGame();
+  }
+
+  function unlockNextRecipe() {
+    const next = RECIPES[state.recipeIdx + 1];
+    if (!next || state.gold < next.cost) return showToast("Not enough Gold!");
+    haptic('heavy');
+    state.gold -= next.cost;
+    state.recipeIdx += 1;
+    showToast(`Unlocked ${next.name}!`);
+    render();
+    saveGame();
+  }
+
+  function claimDeal(idx) {
+    const deals = getCurrentDeals();
+    const d = deals[idx];
+    if (!d || state.claimedDeals[d.id] || !d.canBuy()) return;
+    haptic('heavy');
+    d.buy();
+    state.claimedDeals[d.id] = true;
+    render();
+    saveGame();
+  }
+
+  function switchTab(tab) {
+    haptic('light');
+    ['mine', 'cafe', 'deals'].forEach(t => {
+      document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
+      document.getElementById(`nav-${t}`).classList.toggle('active', t === tab);
+    });
+    render();
+  }
+
+  // Passive Loop (1 second tick)
+  setInterval(() => {
+    const dtMin = 1 / 60;
+    state.beans = Math.min(getMaxCart(), state.beans + getBeansPerMin() * dtMin);
+    state.gold += getGoldPerMin() * dtMin;
+
+    // Auto-Barista consumes 2 beans per cup automatically
+    if (state.baristaLv > 0 && state.beans >= 2) {
+      const cupsPerSec = (state.baristaLv * 1.5) / 60;
+      const beansNeeded = cupsPerSec * 2;
+      if (state.beans >= beansNeeded) {
+        state.beans -= beansNeeded;
+        state.cash += cupsPerSec * getCupPrice();
+        state.rep += cupsPerSec * 0.5;
+      }
+    }
+    render();
+  }, 1000);
+
+  // Render UI
+  function render() {
+    document.getElementById('uiCash').innerText = `$${Math.floor(state.cash).toLocaleString()}`;
+    document.getElementById('uiGold').innerText = `${state.gold.toFixed(1)} Au`;
+    document.getElementById('uiBeans').innerText = `${Math.floor(state.beans)}/${getMaxCart()}`;
+    document.getElementById('uiRep').innerText = Math.floor(state.rep);
+
+    const ranks = ["Street Cart", "Corner Kiosk", "Roastery Loft", "Grand Syndicate"];
+    const rankIdx = state.rep >= 5000 ? 3 : state.rep >= 1200 ? 2 : state.rep >= 250 ? 1 : 0;
+    document.getElementById('rankBadge').innerText = `Rank ${rankIdx + 1}: ${ranks[rankIdx]}`;
+
+    // Mine UI
+    document.getElementById('shaftTitle').innerText = `Shaft ${state.shaftIdx + 1}: ${SHAFTS[state.shaftIdx].name}`;
+    document.getElementById('mineRates').innerText = `+${getBeansPerMin().toFixed(1)} Beans/m | +${getGoldPerMin().toFixed(1)} Au/m`;
+    document.getElementById('cartText').innerText = `${Math.floor(state.beans)} / ${getMaxCart()} Beans`;
+    document.getElementById('cartBar').style.width = `${Math.min(100, (state.beans / getMaxCart()) * 100)}%`;
+
+    document.getElementById('lvMiner').innerText = state.minerLv;
+    document.getElementById('costMiner').innerText = `$${getCost(50, state.minerLv)}`;
+    document.getElementById('btnMiner').disabled = state.cash < getCost(50, state.minerLv);
+
+    document.getElementById('lvCart').innerText = state.cartLv;
+    document.getElementById('costCart').innerText = `$${getCost(100, state.cartLv)}`;
+    document.getElementById('btnCart').disabled = state.cash < getCost(100, state.cartLv);
+
+    const nextShaft = SHAFTS[state.shaftIdx + 1];
+    const btnShaft = document.getElementById('btnShaft');
+    if (nextShaft) {
+      document.getElementById('nextShaftLabel').innerText = `Unlock Shaft ${state.shaftIdx + 2}: ${nextShaft.name}`;
+      document.getElementById('costShaft').innerText = `${nextShaft.cost} Au`;
+      btnShaft.disabled = state.gold < nextShaft.cost;
+    } else {
+      document.getElementById('nextShaftLabel').innerText = "Max Shaft Depth Reached";
+      document.getElementById('costShaft').innerText = "MAX";
+      btnShaft.disabled = true;
+    }
+
+    // Cafe UI
+    document.getElementById('drinkTitle').innerText = `Menu: ${RECIPES[state.recipeIdx].name}`;
+    document.getElementById('cupValue').innerText = `$${getCupPrice().toFixed(2)} / cup`;
+    document.getElementById('brewPayout').innerText = `$${Math.floor(5 * getCupPrice())}`;
+    document.getElementById('btnBrew').disabled = state.beans < 10;
+
+    document.getElementById('lvMachine').innerText = state.machineLv;
+    document.getElementById('costMachine').innerText = `$${getCost(60, state.machineLv)}`;
+    document.getElementById('btnMachine').disabled = state.cash < getCost(60, state.machineLv);
+
+    document.getElementById('lvBarista').innerText = state.baristaLv;
+    document.getElementById('costBarista').innerText = `$${getCost(120, state.baristaLv)}`;
+    document.getElementById('btnBarista').disabled = state.cash < getCost(120, state.baristaLv);
+
+    const nextRecipe = RECIPES[state.recipeIdx + 1];
+    const btnRecipe = document.getElementById('btnRecipe');
+    if (nextRecipe) {
+      document.getElementById('nextRecipeLabel').innerText = `Unlock Recipe: ${nextRecipe.name}`;
+      document.getElementById('costRecipe').innerText = `${nextRecipe.cost} Au`;
+      btnRecipe.disabled = state.gold < nextRecipe.cost;
+    } else {
+      document.getElementById('nextRecipeLabel').innerText = "All Recipes Unlocked";
+      document.getElementById('costRecipe').innerText = "MAX";
+      btnRecipe.disabled = true;
+    }
+
+    // Deal Timer & Cards
+    const secLeft = 1800 - (Math.floor(Date.now() / 1000) % 1800);
+    const m = String(Math.floor(secLeft / 60)).padStart(2, '0');
+    const s = String(secLeft % 60).padStart(2, '0');
+    document.getElementById('dealTimer').innerText = `Refreshes in ${m}:${s}`;
+
+    const deals = getCurrentDeals();
+    document.getElementById('dealsContainer').innerHTML = deals.map((d, i) => {
+      const done = !!state.claimedDeals[d.id];
+      return `
+        <div class="deal-item">
+          <div class="deal-tag">${d.tag}</div>
+          <div style="font-size:14px; font-weight:700;">${d.title}</div>
+          <div class="desc" style="margin:4px 0 8px;">${d.desc}</div>
+          <button class="btn ${done ? 'btn-dark' : 'btn-gold'}" ${done || !d.canBuy() ? 'disabled' : ''} onclick="claimDeal(${i})">
+            <span>${done ? 'Claimed ✓' : d.btn}</span>
+            <span>${done ? '' : '→'}</span>
+          </button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Save & Load (Telegram CloudStorage + localStorage fallback)
+  function saveGame() {
+    state.lastSeen = Date.now();
+    const raw = JSON.stringify(state);
+    localStorage.setItem('subterra_save', raw);
+    if (tg?.CloudStorage) tg.CloudStorage.setItem('subterra_save', raw);
+  }
+
+  function applyLoadedState(raw) {
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw);
+      state = { ...state, ...parsed };
+      // Offline earnings (capped at 4 hours = 240 mins)
+      const offlineMins = Math.min(240, Math.max(0, (Date.now() - state.lastSeen) / 60000));
+      if (offlineMins > 1) {
+        const gainedBeans = Math.min(getMaxCart() - state.beans, getBeansPerMin() * offlineMins);
+        const gainedGold = getGoldPerMin() * offlineMins;
+        state.beans += Math.max(0, gainedBeans);
+        state.gold += gainedGold;
+        showToast(`Offline yield: +${Math.floor(gainedBeans)} Beans, +${gainedGold.toFixed(1)} Au`);
+      }
+    } catch (e) {}
+    render();
+  }
+
+  if (tg?.CloudStorage) {
+    tg.CloudStorage.getItem('subterra_save', (err, val) => {
+      applyLoadedState(val || localStorage.getItem('subterra_save'));
+    });
+  } else {
+    applyLoadedState(localStorage.getItem('subterra_save'));
+  }
+
+  setInterval(saveGame, 10000);
+  render();
+</script>
+</body>
+</html>
